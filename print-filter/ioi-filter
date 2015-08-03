@@ -1,0 +1,97 @@
+#!/bin/bash
+
+SCRIPT_DIR=$(dirname $(readlink -f $0))
+
+# Maximum number of pages that a contestant can print.
+MAX_PAGES=12
+
+# Log file for jobs and stderr output.
+# This file should be pre-created and writable by the CUPS user (lp on Ubuntu).
+LOG_FILE=/var/log/ioiprint.log
+
+PDFTK=/usr/bin/pdftk
+tempdir=$(mktemp -d) || exit 1
+
+echo $(date) "$0 $* (tempdir: $tempdir)" >> $LOG_FILE
+
+# Command line arguments
+job="$1"
+user="$2"
+title="$3"
+numcopies="$4"
+options="$5"
+filename="$6"
+
+if [ -z "$filename" ] ; then
+	filename="-"
+fi
+
+# The script called below should output to stdout a shell snippet which sets
+# the environment variables CONTESTANT_ID, CONTESTANT_NAME, CONTESTANT_COUNTRY,
+# CONTESTANT_LOCATION based on the IP address found in options
+# job-originating-host-name passed in $options
+eval `(cd $SCRIPT_DIR && ./ioi-print-contestant-details "$options")` 2>>$tempdir/err
+
+cat "$filename" > $tempdir/ps.in
+
+# Take a copy of the file. Assume it's a PDF (but it might be PS).
+cp "$tempdir/ps.in" $SCRIPT_DIR/jobs/${job}-${CONTESTANT_LOCATION}.pdf 2>>$tempdir/err
+
+# convert Postscript to PDF if necessary.
+if [ "$(head --bytes=4 $tempdir/ps.in)" = "%!PS" ] ; then
+	/usr/bin/ps2pdf $tempdir/ps.in $tempdir/pdf.in 2>>$tempdir/err
+	submitted_filetype="PS"
+else
+	# Otherwise, assume it's a PDF.
+	mv $tempdir/ps.in $tempdir/pdf.in 2>>$tempdir/err
+	submitted_filetype="PDF"
+fi
+
+# Count number of pages, and limit to $MAX_PAGES if required.
+orig_num_pages=$($PDFTK $tempdir/pdf.in dump_data | perl -n -e '/^NumberOfPages: (\d+)/ && print $1')
+if [ -n "$orig_num_pages" -a "$orig_num_pages" -gt $MAX_PAGES ] ; then
+	LIMITED_STR="(original print job was $orig_num_pages page(s), but exceeded limit of $MAX_PAGES pages)"
+	num_pages="$MAX_PAGES"
+	page_limit="$MAX_PAGES"
+else
+	num_pages="$orig_num_pages"
+	page_limit="end"
+	LIMITED_STR=
+fi
+
+DATE_TIME=$(date -R)
+
+# Generate a contestant-specific template.
+export JOB_ID=$job
+export CONTESTANT_ID
+export CONTESTANT_NAME
+export CONTESTANT_COUNTRY
+export CONTESTANT_LOCATION
+export NUM_PAGES=$num_pages
+export LIMITED_STR
+export DATE_TIME
+
+# Fill in template from environment variables.  (i.e. anything of the form
+# %%XXX% gets replaced with the environment variable $XXX).
+perl -pe 's/%%([^\%]+)%%/$ENV{$1}/g' < $SCRIPT_DIR/aux-template.html > $tempdir/aux.html
+
+# Generate PDF containing watermark and front/back pages with phantomjs.
+phantomjs $SCRIPT_DIR/html2pdf.js $tempdir/aux.html $tempdir/aux.pdf
+
+echo "JOB_ID=$job CONTESTANT_ID=$CONTESTANT_ID CONTESTANT_LOCATION=$CONTESTANT_LOCATION NUM_PAGES=$num_pages treated_as=$submitted_filetype PRINTER=$PRINTER CONTENT_TYPE=$CONTENT_TYPE FINAL_CONTENT_TYPE=$FINAL_CONTENT_TYPE" >> $tempdir/err
+
+# add watermark
+$PDFTK I=$tempdir/pdf.in stamp $tempdir/aux.pdf output $tempdir/pdf.watermarked 2>>$tempdir/err
+# add front and back pages
+$PDFTK I=$tempdir/pdf.watermarked W=$tempdir/aux.pdf cat W2 I1-$page_limit W3 output $tempdir/pdf.out 2>>$tempdir/err
+
+# If the printer works with PDF files directly, use this to output PDF.
+#cat $tempdir/pdf.out
+
+# Otherwise, convert PDF to Postscript and output that instead.
+/usr/bin/pdftops $tempdir/pdf.out - 2>>$tempdir/err
+
+cat $tempdir/err >> $LOG_FILE
+
+# clean-up
+rm -rf $tempdir

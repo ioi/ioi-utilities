@@ -1,0 +1,63 @@
+<html>
+<style>
+div.watermark {
+	position: absolute;
+	top: 15cm;
+	left: 50%;
+	font-size: 140pt;
+	font-family: Helvetica;
+	font-weight: bold;
+	opacity: 0.1;
+	-webkit-transform: translate(-50%, -50%) rotate(45deg);
+	transform: translate(-50%, -50%) rotate(45deg);
+}
+
+div.idblock {
+	position: absolute;
+	top: 1cm;
+	right: 1cm;
+	font-size: 10pt;
+	font-family: Helvetica;
+}
+
+.page-break {
+	page-break-before: always;
+}
+
+</style>
+<body>
+
+<!-- The first page is a watermark which appears on all pages of the print job -->
+<div class="watermark">%%CONTESTANT_LOCATION%%</div>
+
+
+<div class="idblock">
+%%CONTESTANT_NAME%% - %%CONTESTANT_COUNTRY%% &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; job %%JOB_ID%% for %%CONTESTANT_LOCATION%%
+</div>
+
+&nbsp;
+
+<!-- The second page becomes the job start banner -->
+<div class="page-break" />
+
+<div style="padding-top: 3cm; border-bottom: solid 3px; width:100%;">&nbsp;</div>
+<div style="padding-top: 0cm; text-align: center; font-size: 48pt; border-top: solid 3px; width:100%;">Start of print job %%JOB_ID%%</div>
+<div style="padding-top: 0cm; text-align: center; font-size: 12pt;">Number of pages: %%NUM_PAGES%%</div>
+<div style="padding-top: 0cm; text-align: center; font-size: 12pt;">%%LIMITED_STR%%</div>
+<div style="padding-top: 0cm; text-align: center; font-size: 12pt;">%%DATE_TIME%%</div>
+<div style="padding-top: 1cm; text-align: center; font-size: 140pt; font-weight: bold; font-family: Helvetica; clear: both;">%%CONTESTANT_LOCATION%%</div>
+<div style="padding-top: 2cm; text-align: center; font-size: 36pt; font-family: Helvetica; clear: both;">%%CONTESTANT_NAME%%</div>
+<div style="padding-top: 1cm; text-align: center; font-size: 36pt; font-weight: bold; font-family: Helvetica; clear: both;">%%CONTESTANT_COUNTRY%%</div>
+
+
+<!-- The third page becomes the job end banner -->
+<div class="page-break" />
+
+<div style="padding-top: 3cm; text-align: center; font-size: 140pt; font-weight: bold; font-family: Helvetica; clear: both;">%%CONTESTANT_LOCATION%%</div>
+<div style="padding-top: 3cm; text-align: center; font-size: 36pt; font-family: Helvetica; clear: both;">%%CONTESTANT_NAME%%</div>
+<div style="padding-top: 1cm; text-align: center; font-size: 36pt; font-weight: bold; font-family: Helvetica; clear: both;">%%CONTESTANT_COUNTRY%%</div>
+<div style="padding-top: 1cm; text-align: center; font-size: 48pt">End of print job %%JOB_ID%%</div>
+<div style="width: 100%; border-top: solid 3px;" />
+
+</body>
+</html>
