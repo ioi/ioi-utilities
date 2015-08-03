@@ -10,6 +10,7 @@ script carefully before using it. The filter is designed to operate on a
 central CUPS server managing print jobs for all contestant PCs.
 
 Steps to install this include:
+ * Install phantomjs
  * Copy the `ioi-filter` to /usr/lib/cups/filter/. Ensure it has execute
    permissions and is writable only by root (otherwise CUPS will complain).
  * Copy `aux-template.html` and `html2pdf.js` some directory, and edit
